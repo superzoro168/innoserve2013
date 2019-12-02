@@ -1,24 +1,36 @@
 package com.example.innoserve2013;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 @SuppressLint("JavascriptInterface")
 public class MainActivity extends Activity implements LocationListener {
 	private static final String TAG = "innoserve2013";
+
+	private static final int PERMISSIONS_REQUEST_CODE = 0x00001;
+	private static final String[] PERMISSIONS = {
+			Manifest.permission.ACCESS_FINE_LOCATION,
+			Manifest.permission.ACCESS_COARSE_LOCATION
+	};
+
 	private WebView webview;
 	private long exitTime = 0;
 	private double lng=0,lat=0;
@@ -46,7 +58,16 @@ public class MainActivity extends Activity implements LocationListener {
 		webSettings.setJavaScriptEnabled(true); //啟用JavaScript執行功能
 		webSettings.setSupportZoom(true);
 		webSettings.setBuiltInZoomControls(true);
-		webview.setWebChromeClient(new WebChromeClient());
+		webview.setWebViewClient(new WebViewClient() {
+
+			@Override
+			public boolean shouldOverrideUrlLoading(WebView view, String url) {
+				Log.i("WebView", "Attempting to load URL: " + url);
+
+				view.loadUrl(url);
+				return true;
+			}
+		});
 		webview.addJavascriptInterface(new webobj(),"inwcall");
 		webview.loadUrl("file:///android_asset/index.html");
 	}
@@ -90,6 +111,27 @@ public class MainActivity extends Activity implements LocationListener {
 			choiceProvider=LocationManager.GPS_PROVIDER;
 		else if(lms.isProviderEnabled(LocationManager.NETWORK_PROVIDER))//如果沒gps有網路就以網路來定位
 			choiceProvider=LocationManager.NETWORK_PROVIDER;
+		for (final String permission : PERMISSIONS) {
+			if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+				if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, permission)) {
+					new AlertDialog.Builder(MainActivity.this)
+							.setMessage(R.string.request_for_permission_message)
+							.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface dialog, int which) {
+									ActivityCompat.requestPermissions(MainActivity.this,
+											new String[]{permission}, PERMISSIONS_REQUEST_CODE
+									);
+								}
+							});
+				} else {
+					ActivityCompat.requestPermissions(MainActivity.this,
+							new String[]{permission}, PERMISSIONS_REQUEST_CODE
+					);
+				}
+				return;
+			}
+		}
 		Location lo = lms.getLastKnownLocation(choiceProvider);
 		getLocation(lo);
 	}
@@ -134,7 +176,29 @@ public class MainActivity extends Activity implements LocationListener {
   		    alert.show();
   			
   		}
-		
+
+		for (final String permission : PERMISSIONS) {
+			if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+				if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, permission)) {
+					new AlertDialog.Builder(MainActivity.this)
+							.setMessage(R.string.request_for_permission_message)
+							.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface dialog, int which) {
+									ActivityCompat.requestPermissions(MainActivity.this,
+											new String[]{permission}, PERMISSIONS_REQUEST_CODE
+									);
+								}
+							});
+				} else {
+					ActivityCompat.requestPermissions(MainActivity.this,
+							new String[]{permission}, PERMISSIONS_REQUEST_CODE
+					);
+				}
+				return;
+			}
+		}
+
 		if(getService) {
 			//服務提供者、更新頻率60000毫秒=1分鐘、最短距離、地點改變時呼叫物件
 			lms.requestLocationUpdates(choiceProvider, 1000, 1, this);
